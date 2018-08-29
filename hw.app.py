@@ -44,8 +44,8 @@ def welcome():
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/<start_date><br/>"
-        f"/api/v1.0/<start_date>/<end_date><br/>"
+        f"/api/v1.0/start_date/<start_date><br/>"
+        f"/api/v1.0/start_end_date/<start_date>/<end_date><br/>"
     )
 
 
@@ -88,47 +88,37 @@ def tobs():
 
     return jsonify(tobs_data_list)
 
-@app.route("/api/v1.0/<start_date>")
+@app.route("/api/v1.0/start_date/<start_date>")
 def start_date(start_date):
     """Returns the Tmin, Tavg and Tmax for all dates greater than and equal to the start date"""
-    #get list of all available dates
-    dates=session.query(Measurement.date).all()
-    dates_list=list(dates)
+    # Perform a query to retrieve the Tmin, Tavg and Tmax for all dates greater than and equal to the start date
+    dates=session.query(
+        func.min(Measurement.tobs),
+        func.max(Measurement.tobs),
+        func.avg(Measurement.tobs)
+    ).filter(Measurement.date==start_date).all()
     
-   # Perform a query to retrieve the Tmin, Tavg and Tmax for all dates greater than and equal to the start date
-    if start_date in dates_list:
-    start_date_stats=session.query(func.min(Measurement.tobs),func.max(Measurement.tobs),func.avg(Measurement.tobs)).filter(Measurement.date>=start_date).all()
-              
-    # Convert the query results to a Dictionary
-    start_date_stats_dict = dict(start_date_stats)
-
-    return jsonify(start_date_stats_dict)
-
-    else:
+    if None in dates[0]:
         return jsonify({"error": f"Date: {start_date} not found."})
-
-@app.route("/api/v1.0/<start_date>/<end_date>")
-def start_end(start_date,end_date):
-    """Returns the Tmin, Tavg and Tmax for all dates between start and end date"""
-    #get list of all available dates
-    dates=session.query(Measurement.date).all()
-    dates_list=list(dates)
-    
-    # Perform a query to retrieve the Tmin, Tavg and Tmax for all dates between start and end date
-    if start_date in dates_list:
-        if end_date in dates_list:
-                                   start_end_stats=session.query(start_date,end_date,func.min(Measurement.tobs),func.max(Measurement.tobs),func.avg(Measurement.tobs)).filter(Measurement.date>start_date).filter(Measurement.date<end_date).all()
-            # Convert the query results to a Dictionary
-            start_end_stats_dict = dict(start_end_stats)
-            return jsonify({"error": f"Date: {end_date} not found.Providing stats from start date with no end date"})
-            return jsonify(start_end_stats_dict)
-        else:
-            start_stats=session.query(start_date,func.min(Measurement.tobs),func.max(Measurement.tobs),func.avg(Measurement.tobs)).filter(Measurement.date>start_date).all()
-            # Convert the query results to a Dictionary
-            start_stats_dict = dict(start_stats)
-            return jsonify(start_stats_dict)
-    else:
-        return jsonify({"error": f"Date: {start_date} not found."})
+    return jsonify(dates)
         
 if __name__ == '__main__':
     app.run(debug=True)
+    
+@app.route("/api/v1.0/start_end_date/<start_date>/<end_date>")
+def start_end_date(start_date,end_date):
+    """Returns the Tmin, Tavg and Tmax for all dates between start and end dates"""
+    # Perform a query to retrieve the Tmin, Tavg and Tmax for all dates between start and end dates
+    dates=session.query(
+        func.min(Measurement.tobs),
+        func.max(Measurement.tobs),
+        func.avg(Measurement.tobs)
+    ).filter(Measurement.date>=start_date).filter(Measurement.date<=end_date).all()
+    
+    if None in dates[0]:
+        return jsonify({"error": f"Dates not found."})
+    return jsonify(dates)
+        
+if __name__ == '__main__':
+    app.run(debug=True)
+
