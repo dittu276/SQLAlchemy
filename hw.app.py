@@ -101,9 +101,6 @@ def start_date(start_date):
     if None in dates[0]:
         return jsonify({"error": f"Date: {start_date} not found."})
     return jsonify(dates)
-        
-if __name__ == '__main__':
-    app.run(debug=True)
     
 @app.route("/api/v1.0/start_end_date/<start_date>/<end_date>")
 def start_end_date(start_date,end_date):
